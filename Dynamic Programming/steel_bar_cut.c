@@ -1,16 +1,8 @@
 /* Author: Zhang Wenkai, 2017.10.28 */
 
 #include <stdlib.h>
-
-typedef struct {
-  int length;
-  int price;
-} price_table_item;
-
-typedef struct {
-  int first_steel_length;
-  int max_gain;
-} solution_item;
+#include <stdio.h>
+#include "steel_bar_cut.h"
 
 #ifndef CUT_COST
 #error "CUT_COST(cut cost, define as 0 if none) not defined!"
@@ -21,13 +13,12 @@ typedef struct {
 #define NEED_CUT(n,k) (solution[n].max_gain < CUT_GAIN(n,k))
 #define MIN(a, b)     (a >= b ? b : a)
 
-static inline int get_gain_of_no_cut(int steel_length, price_table_item *price_table, int table_size) {
-  int i = 1;
+static inline int get_gain_of_no_cut(const int steel_length,
+									 const price_table_item *price_table,
+									 const int table_size) {
+  int i = 0;
 
-  if (steel_length > price_table[table_size-1].length)
-	return MIN_GAIN;
-
-  for (; i < table_size; i++)
+  for (i = 0; i < table_size; i++)
 	{
 	  if (price_table[i].length == steel_length)
 		return price_table[i].price;
@@ -36,10 +27,11 @@ static inline int get_gain_of_no_cut(int steel_length, price_table_item *price_t
   return MIN_GAIN;
 }
 
-static int get_max_no_cut_steel_length(price_table_item *price_table, int table_size) {
+static int get_max_no_cut_steel_length(const price_table_item *price_table,
+									   const int table_size) {
   int i = 0;
   int max_length = 0;
-  
+
   for (; i < table_size; i++)
 	{
 	  if (price_table[i].length > max_length)
@@ -49,7 +41,22 @@ static int get_max_no_cut_steel_length(price_table_item *price_table, int table_
   return max_length;
 }
 
-solution_item *get_max_gains_steel_cut_solution(int steel_length, price_table_item *price_table, int table_size) {
+static void dump_price_table(const price_table_item *price_table,
+							 const int table_size)
+{
+  int index = 0;
+
+  printf("dump price table:\n");
+  while(index < table_size)
+	{
+	  printf("%d %d\n", price_table[index].length, price_table[index].price);
+	  index++;
+	}
+}
+
+solution_item *get_max_gains_steel_cut_solution(const int steel_length,
+												const price_table_item *price_table,
+												const int table_size) {
   int i = 0;
   int j = 0;
   int max_single_steel_length = 0;
@@ -68,7 +75,7 @@ solution_item *get_max_gains_steel_cut_solution(int steel_length, price_table_it
   /**/
   for (i = 1; i <= steel_length; i++)
 	{
-	  int max_first_steel_length = MIN(i, max_single_steel_length);
+	  int max_first_steel_length = MIN(i - 1, max_single_steel_length);
 	  solution[i].max_gain = get_gain_of_no_cut(i, price_table, table_size);
 	  solution[i].first_steel_length = i;
 
@@ -82,5 +89,50 @@ solution_item *get_max_gains_steel_cut_solution(int steel_length, price_table_it
 		}
 	}
 
+  dump_cut_solution(steel_length, solution);
   return solution;
+}
+
+void free_steel_cut_solution(solution_item *solution)
+{
+  free(solution);
+}
+
+int get_max_gain(const int steel_length,
+				 const price_table_item *price_table,
+				 const int table_size)
+{
+  int max_gain = 0;
+  solution_item *solution = NULL;
+
+  solution = get_max_gains_steel_cut_solution(steel_length, price_table, table_size);
+  if (NULL == solution)
+	return -1;
+
+  max_gain = solution[steel_length].max_gain;
+  free_steel_cut_solution(solution);
+
+  return max_gain;
+}
+	  
+void dump_cut_solution(const int steel_length,
+					   const solution_item *solution)
+{
+  int remain_length = steel_length;
+
+  printf("length of steel: %d\n\t[[solution]]", steel_length);
+  if (solution == NULL)
+	{
+	  printf("INVALID\n");
+	  return;
+	}
+
+  printf("max gain = %d, cut array: [", solution[steel_length].max_gain);
+  while (remain_length > 0)
+	{
+	  printf(" %d ", solution[remain_length].first_steel_length);
+	  remain_length -= solution[remain_length].first_steel_length;
+	}
+
+  printf("]\n");
 }
